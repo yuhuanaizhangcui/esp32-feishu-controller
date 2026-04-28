@@ -1,0 +1,56 @@
+# ============================================
+# ESP32 飞书控制器 - Systemd 服务配置
+# 路径: /etc/systemd/system/esp32-backend.service
+# ============================================
+
+[Unit]
+Description=ESP32 Feishu Controller Backend Service
+Documentation=https://github.com/your-repo/esp32-feishu
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+# 运行用户
+User=esp32ctrl
+Group=esp32ctrl
+
+# 工作目录
+WorkingDirectory=/opt/esp32-controller
+
+# Python 虚拟环境
+Environment="PATH=/opt/esp32-controller/venv/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+# 环境变量文件
+EnvironmentFile=/opt/esp32-controller/.env
+
+# 启动命令
+ExecStart=/opt/esp32-controller/venv/bin/python server.py
+
+# 重启策略
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+
+# 日志配置
+StandardOutput=append:/opt/esp32-controller/logs/stdout.log
+StandardError=append:/opt/esp32-controller/logs/stderr.log
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# 文件系统限制
+ReadWritePaths=/opt/esp32-controller/logs
+PrivateTmp=true
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

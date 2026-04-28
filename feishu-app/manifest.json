@@ -1,0 +1,84 @@
+{
+  "app_id": "cli_xxxxxxxxxxxxxxxxxxxxxxxx",  // TODO: 创建飞书应用后填入 App ID
+  "app_name": "ESP32控制器",
+  "app_description": "通过飞书远程控制ESP32开发板的物联网应用，支持LED灯和马达控制",
+  "version": "1.0.0",
+  "abilities": {
+    "bot": {
+      "bot_name": "ESP32控制器",
+      "bot_description": "ESP32物联网控制器，通过按钮或消息指令控制硬件设备",
+      "enable_slash_command": true,
+      "slash_commands": [
+        {
+          "command": "/开灯",
+          "description": "打开LED灯",
+          "i18n_descriptions": {
+            "zh_cn": "打开LED灯"
+          }
+        },
+        {
+          "command": "/关灯",
+          "description": "关闭LED灯",
+          "i18n_descriptions": {
+            "zh_cn": "关闭LED灯"
+          }
+        },
+        {
+          "command": "/马达左转",
+          "description": "控制马达向左旋转",
+          "i18n_descriptions": {
+            "zh_cn": "控制马达向左旋转"
+          }
+        },
+        {
+          "command": "/马达右转",
+          "description": "控制马达向右旋转",
+          "i18n_descriptions": {
+            "zh_cn": "控制马达向右旋转"
+          }
+        },
+        {
+          "command": "/状态",
+          "description": "查询当前设备状态",
+          "i18n_descriptions": {
+            "zh_cn": "查询当前设备状态"
+          }
+        }
+      ]
+    },
+    "card": {
+      "enable_update_card": true,
+      "enable_personal_card": false
+    }
+  },
+  "event_subscriptions": {
+    "request_url": "https://your-server-domain.com/feishu/webhook",  // TODO: 替换为你的后端服务URL
+    "enable_verify_token": true,
+    "verify_token": "your-verify-token-here",  // TODO: 替换为你的 Verify Token
+    "events": [
+      "im.message.receive_v1",      // 接收消息事件
+      "im.message.message_read_v1",  // 消息已读事件
+      "im.message.direct_mention_bot_v1"  // @机器人消息事件
+    ]
+  },
+  "permissions": [
+    "im:message",
+    "im:message:send_as_bot",
+    "im:message.p2p_msg:readonly",
+    "im:message.group_at_msg:readonly",
+    "im:chat.member:bot:read",
+    "im:chat.member:bot:write"
+  ],
+  "settings": {
+    "app_language": "zh_cn",
+    "timezone": "Asia/Shanghai",
+    "tenant_bot_ability": {
+      "group_chat_with_bot": true,
+      "p2p_chat_with_bot": true
+    }
+  },
+  "contact_config": {
+    "enable_create_group_conversation": false,
+    "include_email": false
+  }
+}
