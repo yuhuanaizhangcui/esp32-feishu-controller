@@ -1,0 +1,98 @@
+# ============================================
+# ESP32 飞书控制器 - 自动部署工作流
+# 功能：代码推送到 main 分支后，自动部署到云服务器
+# ============================================
+
+name: 🚀 Deploy to Cloud Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  deploy:
+    name: 📦 Deploy to Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT || 22 }}
+          script: |
+            # 进入应用目录
+            cd /opt/esp32-controller
+            
+            # 备份当前代码
+            if [ -d "backups" ]; then
+              BACKUP_FILE="backups/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+              tar -czf "$BACKUP_FILE" --exclude='venv' --exclude='logs' --exclude='.git' . 2>/dev/null || true
+              echo "✅ 已备份到: $BACKUP_FILE"
+              
+              # 保留最近 7 天的备份
+              find backups/ -name "backup_*.tar.gz" -mtime +7 -delete 2>/dev/null || true
+            fi
+            
+            # 拉取最新代码
+            echo "📥 拉取最新代码..."
+            git fetch origin main
+            git reset --hard origin/main
+            git pull origin main --force
+            
+            # 更新 Python 依赖
+            echo "📦 更新 Python 依赖..."
+            /opt/esp32-controller/venv/bin/pip install --quiet -r requirements.txt
+            
+            # 重启服务
+            echo "🔄 重启服务..."
+            systemctl restart esp32-backend
+            
+            # 验证服务状态
+            sleep 3
+            if systemctl is-active --quiet esp32-backend; then
+              echo "✅ 部署成功！服务运行正常"
+            else
+              echo "❌ 服务启动失败，查看日志："
+              journalctl -u esp32-backend -n 20 --no-pager
+              exit 1
+            fi
+            
+            # 显示版本信息
+            echo ""
+            echo "📋 部署信息："
+            echo "  - 分支: $(git branch --show-current)"
+            echo "  - 提交: $(git log -1 --oneline)"
+            echo "  - 时间: $(date '+%Y-%m-%d %H:%M:%S')"
+            
+      - name: 🐥 Notify Feishu (Optional)
+        if: always()
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          if [ -n "$FEISHU_WEBHOOK" ]; then
+            STATUS="${{ job.status }}"
+            if [ "$STATUS" = "success" ]; then
+              EMOJI="✅"
+              COLOR="green"
+            else
+              EMOJI="❌"
+              COLOR="red"
+            fi
+            
+            curl -s -X POST "$FEISHU_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"msg_type\": \"text\",
+                \"content\": {
+                  \"text\": \"$EMOJI 部署通知\n项目: esp32-feishu-controller\n状态: $STATUS\n提交: ${{ github.sha }}\n触发者: ${{ github.actor }}\"
+                }
+              }" || true
+          fi
